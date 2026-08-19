@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>clinica médica</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1,
+        h2 {
+            color: #333;
+        }
+
+        label {
+            display: block;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            box-sizing: border-box;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .checkbox-group input {
+            width: auto;
+            margin: 0;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 10px 15px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        .paciente-card {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 4px;
+            background: #fafafa;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>Cadastrar Paciente</h1>
+        <form id="formPaciente">
+            <label for="nome">Nome do Paciente:</label>
+            <input type="text" id="nome" required>
+
+            <label for="especialidade">Especialidade:</label>
+            <select id="especialidade" required>
+                <option value="CLINICA_GERAL">Clínica Geral</option>
+                <option value="PEDIATRIA">Pediatria</option>
+                <option value="CARDIOLOGIA">Cardiologia</option>
+                <option value="ORTOPEDIA">Ortopedia</option>
+            </select>
+
+            <label for="idade">Idade:</label>
+            <input type="number" id="idade" required min="0" max="130">
+
+            <div class="checkbox-group">
+                <input type="checkbox" id="planoSaude">
+                <label for="planoSaude" style="margin: 0;">Possui Plano de Saúde?</label>
+            </div>
+
+            <button type="submit">Salvar Paciente</button>
+        </form>
+
+        <hr style="margin: 30px 0;">
+
+        <h2>Pacientes Cadastrados</h2>
+        <div id="listaPacientes">
+
+        </div>
+    </div>
+
+    <script>
+
+        const API_URL = '/pacientes';
+
+        // Função para carregar a lista ao abrir a página
+        async function carregarPacientes() {
+            try {
+                const resposta = await fetch(API_URL);
+                const pacientes = await resposta.json();
+
+                const divLista = document.getElementById('listaPacientes');
+                divLista.innerHTML = ''; // Limpa a lista antes de preencher
+
+                pacientes.forEach(p => {
+                    const card = document.createElement('div');
+                    card.className = 'paciente-card';
+                    card.innerHTML = `
+                    <strong>${p.nome}</strong> (Idade: ${p.idade})<br>
+                    Especialidade: ${p.especialidade} <br>
+                    Plano de Saúde: ${p.possuiPlanoSaude ? 'Sim' : 'Não'} <br>
+                    <small>Cadastrado em: ${p.dataCadastro}</small>
+                `;
+                    divLista.appendChild(card);
+                });
+            } catch (erro) {
+                console.error("Erro ao carregar pacientes", erro);
+            }
+        }
+
+        // Função para salvar um novo paciente
+        document.getElementById('formPaciente').addEventListener('submit', async function (event) {
+            event.preventDefault(); // Evita que a página recarregue
+
+            // Monta o JSON pegando os valores dos inputs
+            const paciente = {
+                nome: document.getElementById('nome').value,
+                especialidade: document.getElementById('especialidade').value,
+                idade: parseInt(document.getElementById('idade').value),
+                possuiPlanoSaude: document.getElementById('planoSaude').checked
+            };
+
+            try {
+                const resposta = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(paciente)
+                });
+
+                if (resposta.ok) {
+                    alert('Paciente cadastrado com sucesso!');
+                    document.getElementById('formPaciente').reset(); // Limpa o formulário
+                    carregarPacientes(); // Atualiza a lista
+                } else {
+                    // Pega a mensagem de erro que configuramos no Service (ex: erro da Pediatria)
+                    const erroTexto = await resposta.text();
+
+                    try {
+                        const erroJson = JSON.parse(erroTexto);
+                        alert('Erro: ' + (erroJson.message || 'Dados inválidos.'));
+                    } catch {
+                        alert('Erro: ' + erroTexto);
+                    }
+                }
+            } catch (erro) {
+                alert('Erro de conexão com o servidor.');
+            }
+        });
+
+        carregarPacientes();
+    </script>
